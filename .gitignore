@@ -1,0 +1,13 @@
+#ignore model files and datasets
+*.h5
+*.hdf5
+
+# Python virtual environment
+venv/
+/venv
+*.env
+.env
+
+# Python cache files
+__pycache__/
+*.pyc
