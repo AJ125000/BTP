@@ -25,3 +25,11 @@ with h5py.File(file_path, 'r') as f:
     # Also print top-level keys
     print("\nTop-level keys:")
     print(list(f.keys()))
+    
+    m = f['m'][:]
+    print(f"Velocity model 'm': min={m.min()}, max={m.max()}")
+
+    d = f['d'][:]
+    print(f"Grid spacing 'd': {d}")
+
+

@@ -17,13 +17,12 @@ import os
 
 def load_overthrust_model_h5(filepath):
     """
-    Load the SEG/EAGE 3D Overthrust velocity model from HDF5 file.
+    Load SEG/EAGE 3D Overthrust velocity model.
     
-    HDF5 structure:
-    - 'm': velocity model, shape (207, 801, 801) = (nz, nx, ny) in m/s
-    - 'n': dimensions [nz, nx, ny]
-    - 'd': grid spacing [dz, dx, dy] in meters
-    - 'o': origin [oz, ox, oy]
+    CONFIRMED: 
+    - Grid spacing d = [25, 25, 25] meters
+    - Velocity values stored as km/s ÷ 10
+    - Must multiply by 10 to get true km/s
     """
     print("="*70)
     print("LOADING 3D OVERTHRUST MODEL FROM HDF5")
@@ -38,6 +37,7 @@ def load_overthrust_model_h5(filepath):
         
         print("Model Information:")
         print(f"  Raw shape (nz, nx, ny): {velocity_model_raw.shape}")
+        print(f"  Raw value range: {velocity_model_raw.min():.4f} - {velocity_model_raw.max():.4f}")
         print(f"  Dimensions [nz, nx, ny]: {dimensions}")
         print(f"  Grid spacing [dz, dx, dy]: {grid_spacing} meters")
         print(f"  Origin [oz, ox, oy]: {origin}")
@@ -45,23 +45,39 @@ def load_overthrust_model_h5(filepath):
     # Transpose to (nx, ny, nz)
     velocity_model = np.transpose(velocity_model_raw, (1, 2, 0))
     
-    # Convert from m/s to km/s
-    velocity_model = velocity_model / 1000.0
+    # *** CORRECT SCALING: Multiply by 10 ***
+    # Overthrust stores velocities as (km/s) / 10
+    velocity_model = velocity_model * 10.0
+    
+    # Verify grid spacing (should be 25m for standard Overthrust)
+    if np.allclose(grid_spacing, [25, 25, 25]):
+        print("\n✓ Confirmed: Standard Overthrust grid spacing (25m)")
+    else:
+        print(f"\n⚠️  Non-standard grid spacing detected: {grid_spacing}")
     
     spacing = {
-        'dx': float(grid_spacing[1]),
-        'dy': float(grid_spacing[2]),
-        'dz': float(grid_spacing[0]),
+        'dx': float(grid_spacing[1]),  # Will be 25.0
+        'dy': float(grid_spacing[2]),  # Will be 25.0
+        'dz': float(grid_spacing[0]),  # Will be 25.0
         'origin': origin.tolist()
     }
     
     print(f"\nProcessed Model:")
     print(f"  Final shape (nx, ny, nz): {velocity_model.shape}")
-    print(f"  Velocity range: {velocity_model.min():.3f} - {velocity_model.max():.3f} km/s")
+    print(f"  Velocity range: {velocity_model.min():.2f} - {velocity_model.max():.2f} km/s")
     print(f"  Grid spacing: dx={spacing['dx']}m, dy={spacing['dy']}m, dz={spacing['dz']}m")
+    
+    # Sanity check
+    if 0.5 <= velocity_model.min() <= 2.0 and 3.0 <= velocity_model.max() <= 6.0:
+        print("✅ Velocity range is physically reasonable")
+    else:
+        print("⚠️  WARNING: Unusual velocity range!")
+    
     print("="*70 + "\n")
     
     return velocity_model, spacing
+
+
 
 
 # ============================================================================
@@ -625,8 +641,8 @@ if __name__ == "__main__":
         'source_freq': 30.0,
         'dt': 0.001,
         't_max': 2.0,
-        'dx': 10.0,
-        'dz': 10.0,
+        'dx': 25.0,
+        'dz': 25.0,
         'pml_width': 10,
         'target_size': (256, 256),
         'test_run': False,
